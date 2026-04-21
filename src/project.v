@@ -5,7 +5,7 @@
 
 `default_nettype none
 
-module tt_um_vga_leonllr_ds1 (
+module tt_um_vga_example(
   input  wire [7:0] ui_in,    // Dedicated inputs
   output wire [7:0] uo_out,   // Dedicated outputs
   input  wire [7:0] uio_in,   // IOs: Input path
@@ -52,17 +52,38 @@ module tt_um_vga_leonllr_ds1 (
   wire [7:0] m_b;
   wire [7:0] m_c;
   wire [7:0] m_d;
+  reg [7:0] voff1;
+  reg [7:0] voff2;
 
-  assign m_a = 4096/(pix_y+1);//=4;
+
+
+  always @(posedge hsync, negedge rst_n) begin
+    if (~rst_n) begin
+      voff2 <= 8'h08;
+      voff1 <= 8'h00;
+    end else begin
+      if(~vsync) begin
+        voff2 <= 8'h00;
+      end else begin
+        voff1 <= voff1 + 1;
+        if(voff1 > (pix_y >> 3)) begin
+          voff2 <= voff2 - 1;
+          voff1 <= 8'h00;
+        end
+      end
+    end
+  end
+
+  assign m_a = voff2;//=4;
   assign m_b = 0;//= -7;
-  assign m_c = 4096/(pix_y+1);//= 7;
+  assign m_c = 0;//= 7;
   assign m_d = 0;//= 4;
 
   
-  wire [9:0] moving_x = (pix_x * m_a + pix_y * m_c + counter)/8;
+  wire [9:0] moving_x = (pix_x * m_a + pix_y * m_c)/8;
   wire [9:0] moving_y = (pix_x * m_b + pix_y * m_d)/8;
 
-  assign R = video_active ? {moving_x[5], moving_y[24]} : 2'b00;
+  assign R = video_active ? {moving_x[5], moving_y[2]} : 2'b00;
   assign G = video_active ? {moving_x[6], moving_y[2]} : 2'b00;
   assign B = video_active ? {moving_x[7], moving_y[5]} : 2'b00;
   
@@ -75,6 +96,6 @@ module tt_um_vga_leonllr_ds1 (
   end
 
   // Suppress unused signals warning
-  wire _unused_ok_ = &{moving_x, pix_y};
+  wire _unused_ok_ = &{moving_x, pix_y, moving_y};
 
 endmodule
